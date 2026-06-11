@@ -1,0 +1,18 @@
+{
+  "best_model": "Random Forest",
+  "features": [
+    "Water_Temperature",
+    "pH",
+    "Ammonia",
+    "Nitrate",
+    "Phosphate"
+  ],
+  "target": "DO",
+  "models": {
+    "Decision Tree": "model_decision_tree.pkl",
+    "Random Forest": "model_random_forest.pkl",
+    "SVR": "model_svr.pkl",
+    "CNN": "model_cnn.keras",
+    "LSTM": "model_lstm.keras"
+  }
+}
