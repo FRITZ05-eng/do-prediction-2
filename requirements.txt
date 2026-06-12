@@ -8,3 +8,4 @@ seaborn
 streamlit-option-menu
 Pillow
 scipy
+tensorflow==2.13.0
