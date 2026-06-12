@@ -10,7 +10,6 @@ import streamlit as st
 import joblib
 from scipy import stats                              # used for trend detection
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from PIL import Image as _PIL_Image
 
 st.title("My App")
 
@@ -45,7 +44,6 @@ MODELS_DIR   = "model"                    # folder that holds .pkl / .keras file
 DATA_PATH    = "cleaned_dataset.csv"       # pre-cleaned lake dataset
 METRICS_PATH = "model_metrics.csv"         # pre-computed model performance table
 BANNER_PATH  = "taal_banner.jpg"           # optional hero image (jpg variant)
-LOGO_PATH    = "taal logo.png"             # optional sidebar logo
 
 # Input features expected by every model (order matters for the scaler)
 FEATURES = ["Water_Temperature", "pH", "Ammonia", "Nitrate", "Phosphate"]
@@ -74,17 +72,9 @@ DO_LOW      = 6.0   # below this → caution zone
 # PAGE CONFIG  (must be the very first Streamlit call)
 # =============================================================================
 
-# Load favicon — fall back to emoji if no logo file is present
-if os.path.exists(LOGO_PATH):
-    _favicon = _PIL_Image.open(LOGO_PATH)
-elif os.path.exists("taal_logo.png"):
-    _favicon = _PIL_Image.open("taal_logo.png")
-else:
-    _favicon = "💧"
-
 st.set_page_config(
     page_title="Taal Lake Water Quality",
-    page_icon=_favicon,
+    page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -167,8 +157,6 @@ st.markdown("""
     box-shadow: 0 2px 8px rgba(37,99,235,0.10) !important;
     transform: translateX(3px) !important;
 }
-[data-testid="stSidebar"] .nav-link:hover i,
-[data-testid="stSidebar"] .nav-link:hover svg { color: #2563EB !important; }
 
 /* Nav link — active / selected state */
 [data-testid="stSidebar"] .nav-link-selected {
@@ -184,16 +172,6 @@ st.markdown("""
 }
 [data-testid="stSidebar"] .nav-link-selected,
 [data-testid="stSidebar"] .nav-link-selected * { color: #ffffff !important; }
-
-/* Icons — unselected */
-[data-testid="stSidebar"] .nav-link i,
-[data-testid="stSidebar"] .nav-link svg {
-    color: #2563EB !important;
-    transition: color 0.15s ease !important;
-}
-/* Icons — selected */
-[data-testid="stSidebar"] .nav-link-selected i,
-[data-testid="stSidebar"] .nav-link-selected svg { color: #ffffff !important; }
 
 /* Sidebar title text */
 .sidebar-title {
@@ -457,11 +435,11 @@ def classify_do_status(do_value: float) -> tuple[str, str, str]:
       ≥ DO_LOW            → NORMAL
     """
     if do_value < DO_CRITICAL:
-        return ("CRITICAL", "#c0392b", "⚠️ CRITICAL — Below 5 mg/L threshold")
+        return ("CRITICAL", "#c0392b", "CRITICAL — Below 5 mg/L threshold")
     elif do_value < DO_LOW:
-        return ("LOW", "#e67e22", "⚠️ LOW — Caution advised")
+        return ("LOW", "#e67e22", "LOW — Caution advised")
     else:
-        return ("NORMAL", "#27ae60", "✅ ADEQUATE — Safe for aquatic life")
+        return ("NORMAL", "#27ae60", "ADEQUATE — Safe for aquatic life")
 
 
 def validate_inputs(
@@ -513,7 +491,7 @@ def get_trend(series: pd.Series) -> tuple[str, float]:
     the slope direction.
 
     Returns (trend_label, slope) where trend_label is one of:
-      "📈 Improving", "📉 Declining", "➡️ Stable"
+      "Improving", "Declining", "Stable"
 
     'Improving' and 'Declining' are relative to DO — higher DO is better.
     For non-DO parameters the raw slope sign is still informative.
@@ -521,17 +499,17 @@ def get_trend(series: pd.Series) -> tuple[str, float]:
     """
     clean = series.dropna()
     if len(clean) < 3:
-        return "➡️ Stable", 0.0
+        return "Stable", 0.0
 
     x = np.arange(len(clean))
     slope, _, _, _, _ = stats.linregress(x, clean.values)
 
     if abs(slope) < 0.005:
-        label = "➡️ Stable"
+        label = "Stable"
     elif slope > 0:
-        label = "📈 Improving"
+        label = "Improving"
     else:
-        label = "📉 Declining"
+        label = "Declining"
 
     return label, float(slope)
 
@@ -600,31 +578,31 @@ def suggest_remediation(do_value: float, ph: float, ammonia: float) -> list[str]
 
     if do_value < DO_CRITICAL:
         suggestions.append(
-            "🔧 **Aeration:** DO is critically low. Deploy aerators or paddlewheels "
+            "**Aeration:** DO is critically low. Deploy aerators or paddlewheels "
             "immediately to increase oxygen transfer."
         )
     if do_value < DO_LOW:
         suggestions.append(
-            "📉 **Reduce stocking density** temporarily and avoid feeding heavily "
+            "**Reduce stocking density** temporarily and avoid feeding heavily "
             "until DO recovers above 6 mg/L."
         )
     if ammonia > 1.0:
         suggestions.append(
-            "🧪 **Ammonia is elevated.** Check for overfeeding or dead biomass. "
+            "**Ammonia is elevated.** Check for overfeeding or dead biomass. "
             "Consider a partial water exchange or biological filter."
         )
     if ph < 6.5:
         suggestions.append(
-            "🌿 **Low pH** — consider lime application to buffer acidity, "
+            "**Low pH** — consider lime application to buffer acidity, "
             "especially during algae die-off periods."
         )
     if ph > 9.0:
         suggestions.append(
-            "🌞 **High pH** may indicate algal bloom. Monitor turbidity and "
+            "**High pH** may indicate algal bloom. Monitor turbidity and "
             "consider algaecide treatment if bloom is confirmed."
         )
     if not suggestions:
-        suggestions.append("✅ Water quality parameters appear within acceptable ranges.")
+        suggestions.append("Water quality parameters appear within acceptable ranges.")
 
     return suggestions
 
@@ -788,7 +766,7 @@ def show_banner() -> None:
             "<div style='background:linear-gradient(135deg,#1a3c6e,#2e6da4);"
             "border-radius:12px;padding:32px;text-align:center;margin-bottom:16px'>"
             "<span style='color:white;font-size:28px;font-weight:800'>"
-            "💧 Taal Lake Water Quality</span><br>"
+            "Taal Lake Water Quality</span><br>"
             "<span style='color:#cce;font-size:14px'>Prediction Dashboard</span>"
             "</div>",
             unsafe_allow_html=True,
@@ -805,16 +783,6 @@ def section_header(title: str) -> None:
 # =============================================================================
 
 with st.sidebar:
-
-    # ── Logo ────────────────────────────────────────────────────────────────
-    _logo_file = (
-        LOGO_PATH if os.path.exists(LOGO_PATH)
-        else ("taal_logo.png" if os.path.exists("taal_logo.png") else None)
-    )
-    if _logo_file:
-        st.image(_logo_file, width=300)
-    else:
-        st.markdown("## 💧")
 
     # ── App title ────────────────────────────────────────────────────────────
     st.markdown(
@@ -834,17 +802,14 @@ with st.sidebar:
     ]
 
     if HAS_OPTION_MENU:
-        # Preferred: uses streamlit-option-menu for icon support
+        # Preferred: uses streamlit-option-menu
         page = option_menu(
             menu_title=None,
             options=page_options,
-            icons=["house-fill", "graph-up", "search",
-                   "bar-chart-line", "magic", "display"],
             default_index=0,
             key="main_nav",
             styles={
                 "container":       {"padding": "4px 0", "background-color": "transparent"},
-                "icon":            {"color": "#2563EB", "font-size": "18px"},
                 "nav-link": {
                     "font-size": "15px", "font-weight": "500",
                     "text-align": "left", "margin": "3px 0",
@@ -879,7 +844,7 @@ with st.sidebar:
     # We derive min/max from the actual data rather than hardcoding years,
     # so the slider stays correct if the dataset is updated.
     st.markdown(
-        "<div class='sidebar-section-label'>📅 Date Range</div>",
+        "<div class='sidebar-section-label'>Date Range</div>",
         unsafe_allow_html=True,
     )
 
@@ -932,7 +897,7 @@ else:
 
 if page == "Overview":
     show_banner()
-    section_header("🏞️ Water Quality Overview")
+    section_header("Water Quality Overview")
 
     # ── KPI cards ────────────────────────────────────────────────────────────
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -959,7 +924,7 @@ if page == "Overview":
         )
 
     # ── Raw data explorer ────────────────────────────────────────────────────
-    section_header("📋 Complete Raw Data")
+    section_header("Complete Raw Data")
 
     display_mode = st.radio(
         "Data Display Options:",
@@ -994,18 +959,18 @@ if page == "Overview":
             st.dataframe(df.head(50), width='stretch', height=340)
 
     # ── Descriptive statistics ───────────────────────────────────────────────
-    section_header("📊 Descriptive Statistics")
+    section_header("Descriptive Statistics")
     avail = [c for c in FEATURES + [TARGET] if c in df.columns]
     st.dataframe(df[avail].describe().round(3), width='stretch')
 
     # ── Missing values report ────────────────────────────────────────────────
-    section_header("🔍 Missing Values")
+    section_header("Missing Values")
     miss = df[avail].isnull().sum().rename("Missing Count").to_frame()
     miss["% Missing"] = (miss["Missing Count"] / len(df) * 100).round(2)
     st.dataframe(miss, width='stretch')
 
     # ── Anomaly detection ────────────────────────────────────────────────────
-    section_header("⚠️ Anomaly Detection")
+    section_header("Anomaly Detection")
     st.markdown(
         "Rows where any feature deviates more than **2.5 standard deviations** "
         "from its mean are flagged as potential anomalies."
@@ -1027,7 +992,7 @@ if page == "Overview":
 
 elif page == "Time Series":
     show_banner()
-    section_header("📈 Time Series Analysis")
+    section_header("Time Series Analysis")
 
     # Build a continuous numeric time index (fractional year) for plotting
     month_order = [
@@ -1116,7 +1081,7 @@ elif page == "Time Series":
 
 elif page == "Feature Analysis":
     show_banner()
-    section_header("🔬 Feature Analysis")
+    section_header("Feature Analysis")
 
     avail  = [c for c in FEATURES + [TARGET] if c in df.columns]
     colors = ["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B2", "#937860"]
@@ -1199,13 +1164,13 @@ elif page == "Feature Analysis":
 
 elif page == "Model Metrics":
     show_banner()
-    section_header("📊 Model Performance Metrics")
+    section_header("Model Performance Metrics")
 
     if metrics_df is not None:
         # Highlight best model by RMSE (lower is better)
         best = metrics_df.sort_values("RMSE").iloc[0]
         st.success(
-            f"🏆 Best model by RMSE: **{best['Model']}** "
+            f"Best model by RMSE: **{best['Model']}** "
             f"— RMSE={best['RMSE']:.4f} | MAE={best['MAE']:.4f} | R²={best['R²']:.4f}"
         )
 
@@ -1261,7 +1226,7 @@ elif page == "Model Metrics":
 
     else:
         st.warning(
-            "⚠️ `model_metrics.csv` was not found. "
+            "`model_metrics.csv` was not found. "
             "Run the training notebook first to generate it."
         )
 
@@ -1272,7 +1237,7 @@ elif page == "Model Metrics":
 
 elif page == "Predictions":
     show_banner()
-    section_header("🔮 Predict Dissolved Oxygen")
+    section_header("Predict Dissolved Oxygen")
 
     st.markdown(
         "Enter current water quality sensor readings to get a real-time "
@@ -1287,12 +1252,11 @@ elif page == "Predictions":
     # environment BEFORE running `streamlit run app.py`.
     if HAS_TENSORFLOW:
         st.success(
-            f"✅ **TensorFlow {TF_VERSION} detected** — CNN and LSTM models are available.",
-            icon=None,
+            f"TensorFlow {TF_VERSION} detected — CNN and LSTM models are available.",
         )
     else:
         st.warning(
-            "⚠️ **TensorFlow not detected** — CNN and LSTM models are hidden.\n\n"
+            "**TensorFlow not detected** — CNN and LSTM models are hidden.\n\n"
             "If TensorFlow IS installed but you still see this, launch the app from "
             "the **same environment** where you installed it:\n\n"
             "```\n"
@@ -1302,7 +1266,6 @@ elif page == "Predictions":
             "source .venv/bin/activate && streamlit run app.py\n"
             "```\n\n"
             "You can still use **Decision Tree**, **Random Forest**, and **SVR** below.",
-            icon=None,
         )
 
     # Only expose models whose dependencies are met
@@ -1327,14 +1290,14 @@ elif page == "Predictions":
     # ── Input validation warnings (shown before prediction) ─────────────────
     input_warnings = validate_inputs(water_temp, ph, ammonia, nitrate, phosphate)
     if input_warnings:
-        with st.expander("⚠️ Input Warnings — click to expand", expanded=True):
+        with st.expander("Input Warnings — click to expand", expanded=True):
             for w in input_warnings:
                 st.warning(w)
 
     # ── Action buttons ───────────────────────────────────────────────────────
     btn_col1, btn_col2 = st.columns(2)
-    predict_btn = btn_col1.button("🔍 Predict DO", type="primary", use_container_width=True)
-    compare_btn = btn_col2.button("⚖️ Compare All Models", use_container_width=True)
+    predict_btn = btn_col1.button("Predict DO", type="primary", use_container_width=True)
+    compare_btn = btn_col2.button("Compare All Models", use_container_width=True)
 
     # ── Single-model prediction ──────────────────────────────────────────────
     if predict_btn:
@@ -1395,7 +1358,7 @@ elif page == "Predictions":
 
             # ── Remediation suggestions ──────────────────────────────────────
             st.markdown("---")
-            st.subheader("💡 Recommendations")
+            st.subheader("Recommendations")
             for suggestion in suggest_remediation(do_pred, ph, ammonia):
                 st.markdown(suggestion)
 
@@ -1408,7 +1371,7 @@ elif page == "Predictions":
     # ── Compare all models ───────────────────────────────────────────────────
     if compare_btn:
         st.markdown("---")
-        st.subheader("⚖️ All-Model Comparison")
+        st.subheader("All-Model Comparison")
 
         with st.spinner("Running all models…"):
             comp_df = compare_models(current_inputs)
@@ -1447,7 +1410,7 @@ elif page == "Predictions":
 
     # ── Batch prediction (always visible — not gated behind predict_btn) ─────
     st.markdown("---")
-    st.subheader("📁 Batch Prediction")
+    st.subheader("Batch Prediction")
     st.markdown(
         "Upload a CSV with the same feature columns to predict DO for multiple records at once.\n\n"
         "**Expected columns:** `Water_Temperature`, `pH`, `Ammonia`, `Nitrate`, `Phosphate`"
@@ -1517,7 +1480,7 @@ elif page == "Predictions":
 
                 # Show live metrics if the ground-truth DO column is present
                 if TARGET in batch_df.columns:
-                    st.subheader("📐 Live Batch Metrics")
+                    st.subheader("Live Batch Metrics")
                     live = compute_live_metrics(
                         batch_df[TARGET].values, batch_df["Predicted_DO"].values
                     )
@@ -1530,7 +1493,7 @@ elif page == "Predictions":
                 st.dataframe(batch_df, width='stretch')
                 csv_out = batch_df.to_csv(index=False).encode()
                 st.download_button(
-                    "⬇️ Download Results CSV",
+                    "Download Results CSV",
                     csv_out,
                     "batch_predictions.csv",
                     "text/csv",
@@ -1546,10 +1509,10 @@ elif page == "Predictions":
     # ── Prediction history log ───────────────────────────────────────────────
     if st.session_state.get("prediction_log"):
         st.markdown("---")
-        st.subheader("🕓 Session Prediction History")
+        st.subheader("Session Prediction History")
         log_df = pd.DataFrame(st.session_state.prediction_log)
         st.dataframe(log_df, width='stretch')
-        if st.button("🗑️ Clear History"):
+        if st.button("Clear History"):
             st.session_state.prediction_log = []
             st.rerun()
 
@@ -1560,7 +1523,7 @@ elif page == "Predictions":
 
 elif page == "Model Visualizations":
     show_banner()
-    section_header("🖼️ Model Evaluation Visualizations")
+    section_header("Model Evaluation Visualizations")
 
     # Map display label → (relative file path, stage category)
     plot_files = {
@@ -1600,5 +1563,5 @@ elif page == "Model Visualizations":
     # Render each available plot in an expandable section
     for label, (rel_path, _) in filtered_plots.items():
         if os.path.exists(rel_path):
-            with st.expander(f"📊 {label}", expanded=False):
+            with st.expander(label, expanded=False):
                 st.image(rel_path, use_container_width=True)
