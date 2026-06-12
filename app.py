@@ -744,7 +744,7 @@ def predict(model_name: str, inputs: list[float]) -> float:
 
     if model_name in ("Decision Tree", "Random Forest", "SVR"):
         # Standard sklearn .predict() → returns a 1-element array
-        raw = float(load_sklearn_model(model_name).predict(Xs))
+        raw = float(load_sklearn_model(model_name).predict(Xs)[0])
         return _inverse(raw)
 
     elif model_name == "CNN":
