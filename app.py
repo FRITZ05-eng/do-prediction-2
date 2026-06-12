@@ -45,7 +45,7 @@ except Exception:
 # CONSTANTS & PATHS
 # =============================================================================
 
-MODELS_DIR   = "models"                    # folder that holds .pkl / .keras files
+MODELS_DIR   = "model"                    # folder that holds .pkl / .keras files
 DATA_PATH    = "cleaned_dataset.csv"       # pre-cleaned lake dataset
 METRICS_PATH = "model_metrics.csv"         # pre-computed model performance table
 BANNER_PATH  = "taal_banner.jpg"           # optional hero image (jpg variant)
