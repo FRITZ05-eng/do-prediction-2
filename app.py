@@ -12,8 +12,6 @@ from scipy import stats                              # used for trend detection
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from PIL import Image as _PIL_Image
 
-st.title("My App")
-
 DRIVE_FOLDER = "/content/drive/MyDrive/DO_prediction_APP"
 if os.path.exists(DRIVE_FOLDER):
     os.chdir(DRIVE_FOLDER)
@@ -750,19 +748,19 @@ def predict(model_name: str, inputs: list[float]) -> float:
         return float(raw)
 
     if model_name in ("Decision Tree", "Random Forest", "SVR"):
-        # Standard sklearn .predict() → returns a 1-element array
-        raw = float(load_sklearn_model(model_name).predict(Xs))
+        # Standard sklearn .predict() → returns a 1-element array; index [0] to get scalar
+        raw = float(load_sklearn_model(model_name).predict(Xs)[0])
         return _inverse(raw)
 
     elif model_name == "CNN":
         # CNN expects shape (batch, n_features) — same as sklearn
-        raw = float(load_keras_model("cnn").predict(Xs, verbose=0).flatten())
+        raw = float(load_keras_model("cnn").predict(Xs, verbose=0).flatten()[0])
         return _inverse(raw)
 
     elif model_name == "LSTM":
         # LSTM expects shape (batch, timesteps, features); we use 1 timestep
         X3  = Xs.reshape(1, 1, Xs.shape[1])
-        raw = float(load_keras_model("lstm").predict(X3, verbose=0).flatten())
+        raw = float(load_keras_model("lstm").predict(X3, verbose=0).flatten()[0])
         return _inverse(raw)
 
     else:
@@ -1417,7 +1415,7 @@ elif page == "Predictions":
             comp_df = compare_models(current_inputs)
 
         if comp_df.empty:
-            st.warning("No models could run. Check that model files exist in the `models/` folder.")
+            st.warning("No models could run. Check that model files exist in the `model/` folder.")
         else:
             # Colour-coded table
             st.dataframe(
