@@ -1281,28 +1281,17 @@ elif page == "Predictions":
     )
 
     # ── TensorFlow availability notice ───────────────────────────────────────
-    # Shows version when found, or a diagnostic message when not.
-    # If you see the warning despite having TF installed, the cause is almost
-    # always a mismatch between the Python/venv where TF was pip-installed and
-    # the Python that Streamlit is actually using. Solution: activate the correct
-    # environment BEFORE running `streamlit run app.py`.
     if HAS_TENSORFLOW:
         st.success(
-            f"✅ **TensorFlow {TF_VERSION} detected** — CNN and LSTM models are available.",
+            f"✅ **TensorFlow {TF_VERSION} detected** — all 5 models available.",
             icon=None,
         )
     else:
-        st.warning(
-            "⚠️ **TensorFlow not detected** — CNN and LSTM models are hidden.\n\n"
-            "If TensorFlow IS installed but you still see this, launch the app from "
-            "the **same environment** where you installed it:\n\n"
-            "```\n"
-            "# Windows (venv)\n"
-            ".venv\\Scripts\\streamlit run app.py\n\n"
-            "# Mac / Linux\n"
-            "source .venv/bin/activate && streamlit run app.py\n"
-            "```\n\n"
-            "You can still use **Decision Tree**, **Random Forest**, and **SVR** below.",
+        st.info(
+            "ℹ️ **CNN and LSTM models are unavailable** on this deployment "
+            "(TensorFlow not installed). "
+            "Use **Decision Tree**, **Random Forest**, or **SVR** below — "
+            "these three models are fully functional.",
             icon=None,
         )
 
