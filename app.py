@@ -12,6 +12,8 @@ from scipy import stats                              # used for trend detection
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from PIL import Image as _PIL_Image
 
+st.title("My App")
+
 DRIVE_FOLDER = "/content/drive/MyDrive/DO_prediction_APP"
 if os.path.exists(DRIVE_FOLDER):
     os.chdir(DRIVE_FOLDER)
@@ -23,17 +25,13 @@ try:
 except ImportError:
     HAS_OPTION_MENU = False
 
-# ── optional dependency: TensorFlow for CNN / LSTM models ───────────────────
-# We check here (top of file) so every function below can read HAS_TENSORFLOW.
-# We catch ALL exceptions (not just ImportError) because TensorFlow can also
-# fail with OSError (missing DLLs on Windows), RuntimeError (GPU init issues),
-# or other errors that still mean it's effectively unavailable.
+# ── optional dependency: onnxruntime for CNN / LSTM models ──────────────────
+# Much lighter than TensorFlow — works fine on Streamlit Cloud free tier.
+# Models must be exported to .onnx format from the original .keras files.
 try:
-    import tensorflow as _tf          # noqa: F401  (imported for side-effects)
-    # Extra check: make sure the package is actually functional, not just importable
-    _tf_version = _tf.__version__
-    HAS_TENSORFLOW = True
-    TF_VERSION = _tf_version
+    import onnxruntime as _ort
+    HAS_TENSORFLOW = True          # reuse this flag so the rest of the code needs no changes
+    TF_VERSION = f"ONNX Runtime {_ort.__version__}"
 except Exception:
     HAS_TENSORFLOW = False
     TF_VERSION = None
@@ -381,19 +379,16 @@ def load_sklearn_model(name: str):
 
 
 @st.cache_resource
-def load_keras_model(name: str):
+def load_onnx_model(name: str):
     """
-    Load a Keras model (.keras) by short name ("cnn" or "lstm").
-    Raises a clear RuntimeError if TensorFlow is not installed so the
-    caller can surface a friendly message rather than a traceback.
+    Load an ONNX model by short name ("cnn" or "lstm").
+    Returns an onnxruntime.InferenceSession.
     """
     if not HAS_TENSORFLOW:
-        raise RuntimeError(
-            "TensorFlow is not installed. CNN and LSTM models are unavailable.\n"
-            "Run:  pip install tensorflow"
-        )
-    from tensorflow.keras.models import load_model as km
-    return km(os.path.join(MODELS_DIR, f"model_{name.lower()}.keras"))
+        raise RuntimeError("onnxruntime is not installed. CNN and LSTM unavailable.")
+    import onnxruntime as ort
+    path = os.path.join(MODELS_DIR, f"model_{name.lower()}.onnx")
+    return ort.InferenceSession(path)
 
 
 @st.cache_data
@@ -733,7 +728,7 @@ def predict(model_name: str, inputs: list[float]) -> float:
         raise RuntimeError(
             f"**{model_name}** requires TensorFlow which is not installed.\n\n"
             "Please select **Decision Tree**, **Random Forest**, or **SVR** — "
-            "or install TensorFlow with:  `pip install tensorflow`"
+            "or install onnxruntime with:  `pip install onnxruntime`"
         )
 
     # Scale inputs using the pre-fitted feature scaler
@@ -748,19 +743,23 @@ def predict(model_name: str, inputs: list[float]) -> float:
         return float(raw)
 
     if model_name in ("Decision Tree", "Random Forest", "SVR"):
-        # Standard sklearn .predict() → returns a 1-element array; index [0] to get scalar
-        raw = float(load_sklearn_model(model_name).predict(Xs)[0])
+        # Standard sklearn .predict() → returns a 1-element array
+        raw = float(load_sklearn_model(model_name).predict(Xs))
         return _inverse(raw)
 
     elif model_name == "CNN":
         # CNN expects shape (batch, n_features) — same as sklearn
-        raw = float(load_keras_model("cnn").predict(Xs, verbose=0).flatten()[0])
+        sess = load_onnx_model("cnn")
+        inp = {sess.get_inputs()[0].name: Xs.astype(np.float32)}
+        raw = float(sess.run(None, inp)[0].flatten()[0])
         return _inverse(raw)
 
     elif model_name == "LSTM":
         # LSTM expects shape (batch, timesteps, features); we use 1 timestep
         X3  = Xs.reshape(1, 1, Xs.shape[1])
-        raw = float(load_keras_model("lstm").predict(X3, verbose=0).flatten()[0])
+        sess = load_onnx_model("lstm")
+        inp = {sess.get_inputs()[0].name: X3.astype(np.float32)}
+        raw = float(sess.run(None, inp)[0].flatten()[0])
         return _inverse(raw)
 
     else:
@@ -1281,17 +1280,28 @@ elif page == "Predictions":
     )
 
     # ── TensorFlow availability notice ───────────────────────────────────────
+    # Shows version when found, or a diagnostic message when not.
+    # If you see the warning despite having TF installed, the cause is almost
+    # always a mismatch between the Python/venv where TF was pip-installed and
+    # the Python that Streamlit is actually using. Solution: activate the correct
+    # environment BEFORE running `streamlit run app.py`.
     if HAS_TENSORFLOW:
         st.success(
-            f"✅ **TensorFlow {TF_VERSION} detected** — all 5 models available.",
+            f"✅ **TensorFlow {TF_VERSION} detected** — CNN and LSTM models are available.",
             icon=None,
         )
     else:
-        st.info(
-            "ℹ️ **CNN and LSTM models are unavailable** on this deployment "
-            "(TensorFlow not installed). "
-            "Use **Decision Tree**, **Random Forest**, or **SVR** below — "
-            "these three models are fully functional.",
+        st.warning(
+            "⚠️ **TensorFlow not detected** — CNN and LSTM models are hidden.\n\n"
+            "If TensorFlow IS installed but you still see this, launch the app from "
+            "the **same environment** where you installed it:\n\n"
+            "```\n"
+            "# Windows (venv)\n"
+            ".venv\\Scripts\\streamlit run app.py\n\n"
+            "# Mac / Linux\n"
+            "source .venv/bin/activate && streamlit run app.py\n"
+            "```\n\n"
+            "You can still use **Decision Tree**, **Random Forest**, and **SVR** below.",
             icon=None,
         )
 
@@ -1404,7 +1414,7 @@ elif page == "Predictions":
             comp_df = compare_models(current_inputs)
 
         if comp_df.empty:
-            st.warning("No models could run. Check that model files exist in the `model/` folder.")
+            st.warning("No models could run. Check that model files exist in the `models/` folder.")
         else:
             # Colour-coded table
             st.dataframe(
@@ -1481,15 +1491,16 @@ elif page == "Predictions":
                 preds = m.predict(Xb)
             elif model_choice in KERAS_MODELS:
                 if not HAS_TENSORFLOW:
-                    st.error("TensorFlow is required for this model. Run: `pip install tensorflow`")
+                    st.error("onnxruntime is required for CNN/LSTM. Run: `pip install onnxruntime`")
                 elif model_choice == "CNN":
-                    m     = load_keras_model("cnn")
-                    preds = m.predict(Xb, verbose=0).flatten()
+                    sess = load_onnx_model("cnn")
+                    inp = {sess.get_inputs()[0].name: Xb.astype(np.float32)}
+                    preds = sess.run(None, inp)[0].flatten()
                 else:
-                    m     = load_keras_model("lstm")
-                    preds = m.predict(
-                        Xb.reshape(Xb.shape[0], 1, Xb.shape[1]), verbose=0
-                    ).flatten()
+                    sess = load_onnx_model("lstm")
+                    Xb3 = Xb.reshape(Xb.shape[0], 1, Xb.shape[1]).astype(np.float32)
+                    inp = {sess.get_inputs()[0].name: Xb3}
+                    preds = sess.run(None, inp)[0].flatten()
 
             # Inverse-transform from scaled DO units back to mg/L
             if preds is not None and scaler_y is not None:
