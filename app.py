@@ -10,6 +10,7 @@ import streamlit as st
 import joblib
 from scipy import stats                              # used for trend detection
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from PIL import Image as _PIL_Image
 
 st.title("My App")
 
@@ -44,6 +45,7 @@ MODELS_DIR   = "model"                    # folder that holds .pkl / .keras file
 DATA_PATH    = "cleaned_dataset.csv"       # pre-cleaned lake dataset
 METRICS_PATH = "model_metrics.csv"         # pre-computed model performance table
 BANNER_PATH  = "taal_banner.jpg"           # optional hero image (jpg variant)
+LOGO_PATH    = "taal logo.png"             # optional sidebar logo
 
 # Input features expected by every model (order matters for the scaler)
 FEATURES = ["Water_Temperature", "pH", "Ammonia", "Nitrate", "Phosphate"]
@@ -72,9 +74,16 @@ DO_LOW      = 6.0   # below this → caution zone
 # PAGE CONFIG  (must be the very first Streamlit call)
 # =============================================================================
 
+if os.path.exists(LOGO_PATH):
+    _favicon = _PIL_Image.open(LOGO_PATH)
+elif os.path.exists("taal_logo.png"):
+    _favicon = _PIL_Image.open("taal_logo.png")
+else:
+    _favicon = "💧"
+
 st.set_page_config(
     page_title="Taal Lake Water Quality",
-    page_icon="💧",
+    page_icon=_favicon,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -783,6 +792,16 @@ def section_header(title: str) -> None:
 # =============================================================================
 
 with st.sidebar:
+
+    # ── Logo ────────────────────────────────────────────────────────────────
+    _logo_file = (
+        LOGO_PATH if os.path.exists(LOGO_PATH)
+        else ("taal_logo.png" if os.path.exists("taal_logo.png") else None)
+    )
+    if _logo_file:
+        st.image(_logo_file, width=300)
+    else:
+        st.markdown("## 💧")
 
     # ── App title ────────────────────────────────────────────────────────────
     st.markdown(
