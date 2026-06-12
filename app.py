@@ -12,8 +12,6 @@ from scipy import stats                              # used for trend detection
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from PIL import Image as _PIL_Image
 
-st.title("My App")
-
 DRIVE_FOLDER = "/content/drive/MyDrive/DO_prediction_APP"
 if os.path.exists(DRIVE_FOLDER):
     os.chdir(DRIVE_FOLDER)
