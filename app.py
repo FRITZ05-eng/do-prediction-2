@@ -82,7 +82,7 @@ else:
     _favicon = "💧"
 
 st.set_page_config(
-    page_title="Taal Lake Water Quality",
+    page_title="Dissolved Oxygen Level Prediction",
     page_icon=_favicon,
     layout="wide",
     initial_sidebar_state="expanded",
